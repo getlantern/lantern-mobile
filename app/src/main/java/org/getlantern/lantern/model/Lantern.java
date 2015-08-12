@@ -22,7 +22,7 @@ public class Lantern {
                 }
             };
 
-            Client.RunClientProxy(localIP.getHostAddress() + port,
+            Client.RunClientProxy(localIP.getHostAddress() + ":" + port,
                     LanternConfig.APP_NAME, callback);
 
         } catch (final Exception e) {
