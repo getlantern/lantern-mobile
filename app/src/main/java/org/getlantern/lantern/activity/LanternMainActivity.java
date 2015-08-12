@@ -10,10 +10,11 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
-import org.getlantern.lantern.Constants;
+import android.net.VpnService;
+
+import org.getlantern.lantern.config.LanternConfig;
 import org.getlantern.lantern.R;
-import org.getlantern.lantern.service.LanternVPN;
-import org.getlantern.lantern.activity.PromptVPNActivity;
+import org.getlantern.lantern.service.LanternVpn;
 
 
 public class LanternMainActivity extends ActionBarActivity implements Handler.Callback {
@@ -47,10 +48,10 @@ public class LanternMainActivity extends ActionBarActivity implements Handler.Ca
                 Button b = (Button) v;
                 if (!mLanternRunning) {
                     enableVPN();
-                    b.setText(Constants.STOP_BUTTON_TEXT);
+                    b.setText(LanternConfig.STOP_BUTTON_TEXT);
                 } else {
                     stopLantern();
-                    b.setText(Constants.START_BUTTON_TEXT);
+                    b.setText(LanternConfig.START_BUTTON_TEXT);
                 }
                 mLanternRunning = !mLanternRunning;
             }
@@ -66,15 +67,19 @@ public class LanternMainActivity extends ActionBarActivity implements Handler.Ca
     }
 
     // Prompt the user to enable full-device VPN mode
-    public void enableVPN() {
+    protected void enableVPN() {
         Log.d(TAG, "Load VPN configuration");
-        Intent intent = new Intent(LanternMainActivity.this, PromptVPNActivity.class);
+        Intent intent = new Intent(LanternMainActivity.this, PromptVpnActivity.class);
+        if (intent != null) {
+            startActivity(intent);
+        }
         startActivity(intent);
     }
-    public void stopLantern() {
+
+    protected void stopLantern() {
         Log.d(TAG, "Stopping Lantern...");
-        Intent service = new Intent(LanternMainActivity.this, LanternVPN.class);
-        service.setAction(Constants.ACTION_STOP);
+        Intent service = new Intent(LanternMainActivity.this, LanternVpn.class);
+        service.setAction(LanternConfig.DISABLE_VPN);
         startService(service);
     }
 }
