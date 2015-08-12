@@ -7,12 +7,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 
-import org.getlantern.lantern.Constants;
-import org.getlantern.lantern.service.LanternVPN;
+import org.getlantern.lantern.config.LanternConfig;
+import org.getlantern.lantern.service.LanternVpn;
 
-public class PromptVPNActivity extends Activity {
+public class PromptVpnActivity extends Activity {
 
-	private static final String TAG = "PromptVPNActivity";
+	private static final String TAG = "PromptVpnActivity";
 	private final static int REQUEST_VPN = 7777;
 	private	Intent intent = null;
 
@@ -40,7 +40,7 @@ public class PromptVPNActivity extends Activity {
             	
             	public void run ()
             	{
-            		sendIntentToService(Constants.ENABLE_VPN);
+            		sendIntentToService(LanternConfig.ENABLE_VPN);
             		finish();
             	}
             }, 1000);
@@ -54,13 +54,13 @@ public class PromptVPNActivity extends Activity {
 	        
 	        if (request == REQUEST_VPN && response == RESULT_OK)
 	        {
-	            sendIntentToService(Constants.ENABLE_VPN);
+	            sendIntentToService(LanternConfig.ENABLE_VPN);
 	        }
 	  }
 	  
 
 		private void sendIntentToService(String action) {
-			Intent lanternService = new Intent(this, LanternVPN.class);
+			Intent lanternService = new Intent(this, LanternVpn.class);
 			lanternService.setAction(action);
 			startService(lanternService);
 		}
