@@ -20,7 +20,7 @@ public class PromptVpnActivity extends Activity {
 	public void onCreate( Bundle icicle ) {
 		super.onCreate( icicle );
 
-		Log.d(TAG, "Prompting user to start Orbot VPN");
+		Log.d(TAG, "Prompting user to start Lantern VPN");
 
 		intent = VpnService.prepare(this);
 		startVpnService();
