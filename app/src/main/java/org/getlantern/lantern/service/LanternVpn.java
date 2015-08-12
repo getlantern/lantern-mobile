@@ -25,17 +25,17 @@ public class LanternVpn extends VpnService implements Handler.Callback {
     private static final String TAG = "LanternVpn";
     private Thread mVpnThread;
 	private ParcelFileDescriptor vpnInterface;
-    private String mSessionName = "LanternVPN";
+    private static final String mSessionName = "LanternVPN";
 	private static final String vpnGateway = "10.0.0.1";
 	private static final String defaultRoute = "0.0.0.0";
-	private final String virtualIP = "10.0.0.2";
-	private final String virtualNetMask = "255.255.255.0";
-	private final String localSocks = "127.0.0.1:" + LanternConfig.HTTP_PROXY_PORT;
-	private final String localDNS = "127.0.0.1:" + LanternConfig.DNS_PORT_DEFAULT;
+    private static final String defaultDnsServer = "8.8.4.4";
+	private static final String virtualIP = "10.0.0.2";
+	private static final String virtualNetMask = "255.255.255.0";
+	private static final String localSocks = "127.0.0.1:" + LanternConfig.HTTP_PROXY_PORT;
+	private static final String localDNS = "127.0.0.1:" + LanternConfig.DNS_PORT_DEFAULT;
+    private final static int VPN_MTU = 1500;
 
     private Lantern lanternProxy;
-    
-    private final static int VPN_MTU = 1500;
 
 	@Override
 	public void onCreate() {
