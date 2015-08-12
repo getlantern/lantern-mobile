@@ -23,12 +23,8 @@ import org.torproject.android.vpn.Tun2Socks;
 @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
 public class LanternVpn extends VpnService implements Handler.Callback {
     private static final String TAG = "LanternVpn";
-	private PendingIntent mConfigureIntent;
-
-    private Handler mHandler;
     private Thread mVpnThread;
 	private ParcelFileDescriptor vpnInterface;
-
     private String mSessionName = "LanternVPN";
 	private static final String vpnGateway = "10.0.0.1";
 	private static final String defaultRoute = "0.0.0.0";
@@ -45,7 +41,6 @@ public class LanternVpn extends VpnService implements Handler.Callback {
 	public void onCreate() {
 		super.onCreate();
 		System.loadLibrary("tun2socks");
-		//setupLantern();
 	}
 
 
