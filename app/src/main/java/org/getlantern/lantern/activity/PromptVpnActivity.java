@@ -12,57 +12,57 @@ import org.getlantern.lantern.service.LanternVpn;
 
 public class PromptVpnActivity extends Activity {
 
-	private static final String TAG = "PromptVpnActivity";
-	private final static int REQUEST_VPN = 7777;
-	private	Intent intent = null;
+    private static final String TAG = "PromptVpnActivity";
+    private final static int REQUEST_VPN = 7777;
+    private	Intent intent = null;
 
-	@Override
-	public void onCreate( Bundle icicle ) {
-		super.onCreate( icicle );
+    @Override
+    public void onCreate( Bundle icicle ) {
+        super.onCreate( icicle );
 
-		Log.d(TAG, "Prompting user to start Lantern VPN");
+        Log.d(TAG, "Prompting user to start Lantern VPN");
 
-		intent = VpnService.prepare(this);
-		startVpnService();
+        intent = VpnService.prepare(this);
+        startVpnService();
 
-	}
-	 
-	private void startVpnService ()
-	{
-   		if (intent != null) {
-			Log.w(TAG,"Requesting VPN connection");
-			startActivityForResult(intent,REQUEST_VPN);
-		} else {
-   			Log.d(TAG, "VPN enabled, starting Lantern...");
-            
+    }
+
+    private void startVpnService ()
+    {
+        if (intent != null) {
+            Log.w(TAG,"Requesting VPN connection");
+            startActivityForResult(intent,REQUEST_VPN);
+        } else {
+            Log.d(TAG, "VPN enabled, starting Lantern...");
+
             Handler h = new Handler();
             h.postDelayed(new Runnable () {
-            	
-            	public void run ()
-            	{
-            		sendIntentToService(LanternConfig.ENABLE_VPN);
-            		finish();
-            	}
-            }, 1000);
-   			
-   		}
-	}
-	
-	  @Override
-	    protected void onActivityResult(int request, int response, Intent data) {
-	        super.onActivityResult(request, response, data);
-	        
-	        if (request == REQUEST_VPN && response == RESULT_OK)
-	        {
-	            sendIntentToService(LanternConfig.ENABLE_VPN);
-	        }
-	  }
-	  
 
-		private void sendIntentToService(String action) {
-			Intent lanternService = new Intent(this, LanternVpn.class);
-			lanternService.setAction(action);
-			startService(lanternService);
-		}
-    
+                public void run ()
+                {
+                    sendIntentToService(LanternConfig.ENABLE_VPN);
+                    finish();
+                }
+            }, 1000);
+
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int request, int response, Intent data) {
+        super.onActivityResult(request, response, data);
+
+        if (request == REQUEST_VPN && response == RESULT_OK)
+        {
+            sendIntentToService(LanternConfig.ENABLE_VPN);
+        }
+    }
+
+
+    private void sendIntentToService(String action) {
+        Intent lanternService = new Intent(this, LanternVpn.class);
+        lanternService.setAction(action);
+        startService(lanternService);
+    }
+
 }

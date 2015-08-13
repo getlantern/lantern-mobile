@@ -9,7 +9,7 @@ public interface LanternConfig {
 
     public final static int SOCKS_PROXY_PORT = 9051;
     public final static int HTTP_PROXY_PORT = 9121;
-    public final static int DNS_PORT_DEFAULT = 5400;
+    public final static int DNS_PORT_DEFAULT = 8716;
     public final static String ENABLE_VPN = "org.getlantern.lantern.intent.action.ENABLE";
     public final static String DISABLE_VPN = "org.getlantern.lantern.intent.action.DISABLE";
     public final static String START_BUTTON_TEXT = "START";
