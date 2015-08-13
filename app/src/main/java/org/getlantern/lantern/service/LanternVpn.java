@@ -31,16 +31,19 @@ public class LanternVpn extends VpnService implements Handler.Callback {
     private static final String defaultDnsServer = "8.8.4.4";
 	private static final String virtualIP = "10.0.0.2";
 	private static final String virtualNetMask = "255.255.255.0";
-	private static final String localSocks = "127.0.0.1:" + LanternConfig.HTTP_PROXY_PORT;
-	private static final String localDNS = "127.0.0.1:" + LanternConfig.DNS_PORT_DEFAULT;
     private final static int VPN_MTU = 1500;
 
     private Lantern lanternProxy;
+	private String localSocks;
+	private String localDNS;
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		System.loadLibrary("tun2socks");
+
+		this.localSocks = String.format("127.0.0.1:" + LanternConfig.SOCKS_PROXY_PORT);
+		this.localDNS = String.format("127.0.0.1:" + LanternConfig.DNS_PORT_DEFAULT);
 	}
 
 
@@ -58,11 +61,11 @@ public class LanternVpn extends VpnService implements Handler.Callback {
 			setupLantern();
 		} else if (action.equals(LanternConfig.ACTION_STATUS)) {
 			Log.d(TAG, "refreshing LanternVPNService service!");
-			//stopLantern();
-			//setupLantern();
+			refreshLantern();
 		} else if (action.equals(LanternConfig.DISABLE_VPN)) {
 			Log.d(TAG, "Received STOP request");
-			//stopLantern();
+			stopLantern();
+			stopVpn();
 		}
         
         return START_STICKY;
@@ -72,12 +75,6 @@ public class LanternVpn extends VpnService implements Handler.Callback {
 
 		Log.d(TAG, "Setting up Lantern!");
 
-		// stop previously running instance of Lantern, if any
-		if (vpnInterface != null) {
-			stopLantern();
-		}
-
-		// Stop the previous session by interrupting the thread.
 		if (mVpnThread == null || (!mVpnThread.isAlive())) {
 			startLantern();
 
@@ -116,7 +113,13 @@ public class LanternVpn extends VpnService implements Handler.Callback {
 			lanternProxy.stop();
 			lanternProxy = null;
 		}
+	}
 
+	private void refreshLantern() {
+
+	}
+
+	private void stopVpn() {
 		Log.d(TAG, "closing interface, destroying VPN interface");
 		try {
 			// close any existing VPN interface
@@ -156,12 +159,6 @@ public class LanternVpn extends VpnService implements Handler.Callback {
     		{
 	    		try
 		        {
-
-					Builder builder = new Builder();
-					builder.setMtu(VPN_MTU);
-					builder.addAddress(vpnGateway, 28);
-					builder.addRoute("0.0.0.0", 0);
-					builder.setSession("lanternVPN");
 
 					vpnInterface = buildVpnConnection();
 
