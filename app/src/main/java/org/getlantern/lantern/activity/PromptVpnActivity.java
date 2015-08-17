@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import org.getlantern.lantern.config.LanternConfig;
+import org.getlantern.lantern.service.LanternCustomVpn;
 import org.getlantern.lantern.service.LanternVpn;
 
 public class PromptVpnActivity extends Activity {
@@ -60,7 +61,7 @@ public class PromptVpnActivity extends Activity {
 
 
     private void sendIntentToService(String action) {
-        Intent lanternService = new Intent(this, LanternVpn.class);
+        Intent lanternService = new Intent(this, LanternCustomVpn.class);
         lanternService.setAction(action);
         startService(lanternService);
     }

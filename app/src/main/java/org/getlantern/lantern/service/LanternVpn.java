@@ -1,106 +1,87 @@
+/*
+ * Copyright (C) 2011 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.getlantern.lantern.service;
 
-import java.io.IOException;
-import java.net.InetAddress;
-
-import org.getlantern.lantern.config.LanternConfig;
-import org.getlantern.lantern.model.Lantern;
-
-import android.annotation.TargetApi;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.net.VpnService;
-import android.app.PendingIntent;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
-import java.net.UnknownHostException;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.widget.Toast;
 
-import org.torproject.android.vpn.Tun2Socks;
+import org.getlantern.lantern.model.Lantern;
 
-@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
-public class LanternVpn extends VpnService implements Handler.Callback {
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+
+public class LanternVpn extends VpnService implements Handler.Callback, Runnable {
     private static final String TAG = "LanternVpn";
-    private Thread mVpnThread;
-    private ParcelFileDescriptor vpnInterface;
-    private static final String mSessionName = "LanternVPN";
-    private static final String vpnGateway = "10.0.0.1";
-    private static final String defaultRoute = "0.0.0.0";
-    private static final String defaultDnsServer = "8.8.4.4";
-    private static final String virtualIP = "10.0.0.2";
-    private static final String virtualNetMask = "255.255.255.0";
-    private final static int VPN_MTU = 1500;
 
-    private Lantern lanternProxy;
-    private String localSocks;
-    private String localDNS;
+    private PendingIntent mConfigureIntent;
+    private String mSessionName = "LanternVpn";
+    private String defaultDnsServer = "8.8.8.8";
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        System.loadLibrary("tun2socks");
+    private Handler mHandler;
+    private Thread mThread;
+    private Lantern lantern = null;
 
-        this.localSocks = String.format("127.0.0.1:" + LanternConfig.SOCKS_PROXY_PORT);
-        this.localDNS = String.format("127.0.0.1:" + LanternConfig.DNS_PORT_DEFAULT);
-    }
-
+    private ParcelFileDescriptor mInterface;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        if (intent == null) {
-            return START_STICKY;
+        // The handler is only used to show messages.
+        if (mHandler == null) {
+            mHandler = new Handler(this);
         }
 
-        String action = intent.getAction();                   
-        Log.d(TAG, "Received " + intent.getAction() + " command");
-
-        if (action.equals(LanternConfig.ENABLE_VPN)) {
-            setupLantern();
-        } else if (action.equals(LanternConfig.ACTION_STATUS)) {
-            Log.d(TAG, "refreshing LanternVPNService service!");
-            refreshLantern();
-        } else if (action.equals(LanternConfig.DISABLE_VPN)) {
-            Log.d(TAG, "Received STOP request");
-            stopLantern();
-            stopVpn();
+        // Stop the previous session by interrupting the thread.
+        if (mThread != null) {
+            mThread.interrupt();
         }
 
+        // Make sure we check for null here
+        // as on start command can run multiple times
+        if (lantern == null) {
+            startLantern();
+        }
+
+        // Start a new session by creating a new thread.
+        mThread = new Thread(this, "ToyVpnThread");
+        try {
+            mThread.sleep(5000);
+            mThread.start();
+        }
+        catch (Exception e) {
+            Log.d(TAG, "Couldn't configure VPN interface: " + e);
+        }
         return START_STICKY;
     }
 
-    private void setupLantern() {
-
-        Log.d(TAG, "Setting up Lantern!");
-
-        if (mVpnThread == null || (!mVpnThread.isAlive())) {
-            startLantern();
-
-            try {
-
-                if (vpnInterface != null) {
-                    Log.d(TAG, "Stopping previous Tun2Socks instance");
-                    Tun2Socks.Stop();
-                }
-
-                setupTun2Socks();
-            } catch (Exception e) {
-                Log.e(TAG, "Error: " + e);
-            }
-        }
-    }
-
     private synchronized void startLantern() {
+
         Log.d(TAG, "Loading Lantern library");
         Thread thread = new Thread() {
             public void run() {
                 try {
-                    lanternProxy = new Lantern();
-                    lanternProxy.start(InetAddress.getLocalHost(), LanternConfig.HTTP_PROXY_PORT);
-                    Log.d(TAG, "Lantern successfully started!");
-                } catch (UnknownHostException uhe) {
+                    lantern = new Lantern();
+                } catch (Exception uhe) {
                     Log.e(TAG, "Error starting Lantern with given host: " + uhe);
                 }
             }
@@ -108,38 +89,11 @@ public class LanternVpn extends VpnService implements Handler.Callback {
         thread.start();
     }
 
-    private void stopLantern() {
-        if (lanternProxy != null) {
-            lanternProxy.stop();
-            lanternProxy = null;
-        }
-    }
-
-    private void refreshLantern() {
-
-    }
-
-    private void stopVpn() {
-        Log.d(TAG, "closing interface, destroying VPN interface");
-        try {
-            // close any existing VPN interface
-            if (vpnInterface != null) {
-                vpnInterface.close();
-                vpnInterface = null;
-            }
-        } catch (final IOException ioe) {
-            Log.e(TAG, "Error cleaning up previous VPN interface: " + ioe);
-        }
-
-        // Finally, shut down Tun2Socks
-        Tun2Socks.Stop();
-    }
-
     @Override
     public void onDestroy() {
-        Log.d(TAG,"Stopping LanternVPNService service!");
-        stopLantern();
-        super.onDestroy();
+        if (mThread != null) {
+            mThread.interrupt();
+        }
     }
 
     @Override
@@ -150,62 +104,94 @@ public class LanternVpn extends VpnService implements Handler.Callback {
         return true;
     }
 
-    private synchronized void setupTun2Socks()  {
+    @Override
+    public synchronized void run() {
+        try {
+            Log.i(TAG, "Starting VPN");
+            if (!isRunning()) {
+                startRun();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error trying to start VPN: " + e);
+            throw new RuntimeException("Couldn't configure VPN");
+        }
+    }
 
-        mVpnThread = new Thread ()
-        {
+    private boolean isRunning() {
+        return mInterface != null;
+    }
 
-            public void run ()
+    private void startRun() throws Exception {
+        try {
+            Log.d(TAG, "Connected to tunnel");
+
+            configure();
+
+            final FileInputStream in = new FileInputStream(mInterface.getFileDescriptor());
+
+            final ByteBuffer packet = ByteBuffer.allocate(32767);
+
+            Log.d(TAG, "VPN interface is attached to Lantern");
+
+            final LanternVpn service = this;
+            new Thread ()
             {
-                try
+                public void run ()
                 {
+                    try
+                    {
+                        while (true) {
+                            int length = in.read(packet.array());
+                            if (length > 0) {
+                                packet.limit(length);
+                                lantern.processPacket(packet);
+                                packet.clear();
+                            }
 
-                    vpnInterface = buildVpnConnection();
+                        }
 
-                    if (vpnInterface == null) {
-                        Log.e(TAG, "Could not instantiate VPN interface!");
-                        throw new RuntimeException();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.e(TAG, "Got an exception receiving packets: " + e);
+                        e.printStackTrace();
                     }
 
-                    Tun2Socks.Start(vpnInterface, VPN_MTU, virtualIP, virtualNetMask, localSocks, localDNS,
-                            true);
-                    Log.d(TAG, "Successfully started tun2socks");
                 }
-                catch (Exception e)
-                {
-                    Log.d(TAG,"tun2Socks has stopped",e);
-                }
-            }
+            }.start();
+            Log.i(TAG, "Started VPN mode");
 
-        };
-        mVpnThread.start();
-    }
+        } catch (Exception e) {
 
-    private ParcelFileDescriptor buildVpnConnection() {
-        try {
-            Builder builder = new Builder();
-            builder.setMtu(VPN_MTU);
-            builder.addAddress(vpnGateway, 28);
-            builder.addRoute(defaultRoute, 0);
-            builder.setSession(mSessionName);
-            ParcelFileDescriptor newInterface = builder.setSession(mSessionName)
-                .establish();
-
-            if (vpnInterface != null) {
-                Log.d(TAG, "Stopping existing VPN interface");
-                vpnInterface.close();
-            }
-            return newInterface;
-        } catch (final Exception ioe) {
-            Log.e(TAG, "Error closing existing VPN interface: " + ioe);
         }
-        return null;
+
     }
 
-    @Override
-    public void onRevoke() {
-        //stopLantern();
-        super.onRevoke();
-    }
+    private void configure() throws Exception {
+        // If the old interface has exactly the same parameters, use it!
+        if (mInterface != null) {
+            Log.i(TAG, "Using the previous interface");
+            return;
+        }
 
+        // Configure a builder while parsing the parameters.
+        Builder builder = new Builder();
+        builder.setMtu(1500);
+        builder.addRoute("0.0.0.0", 0);
+        builder.addAddress("10.0.0.1", 28);
+        builder.addDnsServer(defaultDnsServer);
+
+        // Close the old interface since the parameters have been changed.
+        try {
+            mInterface.close();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // Create a new interface using the builder and save the parameters.
+        mInterface = builder.setSession(mSessionName)
+                .setConfigureIntent(mConfigureIntent)
+                .establish();
+        Log.i(TAG, "New interface: " + mInterface);
+    }
 }
