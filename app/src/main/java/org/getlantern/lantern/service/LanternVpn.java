@@ -190,8 +190,8 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
 
         // Create a new interface using the builder and save the parameters.
         mInterface = builder.setSession(mSessionName)
-                .setConfigureIntent(mConfigureIntent)
-                .establish();
+            .setConfigureIntent(mConfigureIntent)
+            .establish();
         Log.i(TAG, "New interface: " + mInterface);
     }
 }

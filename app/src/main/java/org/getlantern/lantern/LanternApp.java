@@ -7,6 +7,4 @@ import android.app.Application;
  */
 public class LanternApp extends Application {
     private static final String TAG = "LanternApp";
-
-
 }
