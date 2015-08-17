@@ -22,7 +22,7 @@
                      android:theme="@android:style/Theme.NoDisplay"
                      />
 
-        <service android:name=".service.LanternCustomVpn"
+        <service android:name=".service.LanternVpn"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService"/>
