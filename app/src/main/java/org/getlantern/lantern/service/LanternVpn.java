@@ -63,7 +63,7 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
         }
 
         // Start a new session by creating a new thread.
-        mThread = new Thread(this, "ToyVpnThread");
+        mThread = new Thread(this, "LanternVpnThread");
         try {
             mThread.sleep(5000);
             mThread.start();
