@@ -123,7 +123,6 @@ public class LanternVpn extends VpnService
 
     private void startRun() throws Exception {
         try {
-            Log.d(TAG, "Connected to tunnel");
 
             configure();
 
@@ -132,9 +131,9 @@ public class LanternVpn extends VpnService
             final ByteBuffer packet = ByteBuffer.allocate(32767);
 
             Log.d(TAG, "VPN interface is attached to Lantern");
+
             lantern.testConnect();
 
-            final LanternVpn service = this;
             new Thread ()
             {
                 public void run ()
