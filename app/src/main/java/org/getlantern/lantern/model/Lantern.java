@@ -62,11 +62,7 @@ public class Lantern extends Client.SocketProvider.Stub {
             }
 
             public void WritePacket(String destination, long port, String protocol) {
-                try {
-                    Log.d(TAG, "Destination -> " + destination + ":" + port + " " + protocol);
-                } catch (Exception e) {
-                    Log.e(TAG, "Exception processing packet " + e);
-                }
+                // Just used to demonstrate a callback after intercepting a packet
             }
         };
 
