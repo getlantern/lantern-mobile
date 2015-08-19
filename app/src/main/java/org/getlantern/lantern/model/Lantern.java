@@ -2,18 +2,21 @@ package org.getlantern.lantern.model;
 
 import android.util.Log;
 
-import java.io.FileOutputStream;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 
 import go.client.*;
+import org.getlantern.lantern.service.LanternVpn;
 import org.getlantern.lantern.config.LanternConfig;
-import org.getlantern.lantern.service.LanternCustomVpn;
 
-public class Lantern {
+public class Lantern extends Client.SocketProvider.Stub {
 
     private static final String TAG = "Lantern";
+    private LanternVpn service;
+
+    public Lantern(LanternVpn service) {
+        this.service = service;
+    }
 
     public void start(final InetAddress localIP, final int port) {
         try {
@@ -28,6 +31,29 @@ public class Lantern {
         }
     }
 
+    // Protect is used to exclude a socket specified by fileDescriptor
+    // from the VPN connection. Once protected, the underlying connection
+    // is bound to the VPN device and won't be forwarded
+    @Override
+    public void Protect(long fileDescriptor) throws Exception {
+        if (!this.service.protect((int) fileDescriptor)) {
+            throw new Exception("protect socket failed");
+        }
+    }
+
+
+    // Runs a simple HTTP GET to verify Lantern is able to open connections
+    public void testConnect() {
+        try {
+            final String testAddr = "www.example.com:80";
+            Client.TestConnect(this, testAddr);
+        } catch (final Exception e) {
+
+        }
+    }
+
+    // As packets arrive on the VpnService, processPacket sends the raw bytes
+    // to Lantern for processing
     public void processPacket(final ByteBuffer packet) {
         Log.d(TAG, "Processing a packet with Lantern");
         Client.GoCallback.Stub callback = new Client.GoCallback.Stub() {
@@ -48,17 +74,6 @@ public class Lantern {
             Client.CapturePacket(packet.array(), callback);
         } catch (final Exception e) {
             Log.e(TAG, "Unable to process incoming packet!");
-        }
-    }
-
-
-    public static void stop() {
-        try {
-            Log.d(TAG, "Sending STOP signal to Lantern process");
-            Client.StopClientProxy();
-        } catch (final Exception e) {
-            Log.e(TAG, "Fatal error while trying to stop Lantern: " + e);
-            throw new RuntimeException(e);
         }
     }
 }

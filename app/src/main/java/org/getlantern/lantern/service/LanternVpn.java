@@ -31,7 +31,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 
-public class LanternVpn extends VpnService implements Handler.Callback, Runnable {
+public class LanternVpn extends VpnService
+        implements Handler.Callback, Runnable {
     private static final String TAG = "LanternVpn";
 
     private PendingIntent mConfigureIntent;
@@ -77,10 +78,11 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
     private synchronized void startLantern() {
 
         Log.d(TAG, "Loading Lantern library");
+        final LanternVpn service = this;
         Thread thread = new Thread() {
             public void run() {
                 try {
-                    lantern = new Lantern();
+                    lantern = new Lantern(service);
                 } catch (Exception uhe) {
                     Log.e(TAG, "Error starting Lantern with given host: " + uhe);
                 }
@@ -132,6 +134,7 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
             final ByteBuffer packet = ByteBuffer.allocate(32767);
 
             Log.d(TAG, "VPN interface is attached to Lantern");
+            lantern.testConnect();
 
             final LanternVpn service = this;
             new Thread ()
@@ -141,6 +144,8 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
                     try
                     {
                         while (true) {
+                            // Read any IP packet from the VpnService input stream
+                            // and copy those to a ByteBuffer
                             int length = in.read(packet.array());
                             if (length > 0) {
                                 packet.limit(length);
@@ -162,7 +167,7 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
             Log.i(TAG, "Started VPN mode");
 
         } catch (Exception e) {
-
+            Log.e(TAG, "Error with VPN" + e);
         }
 
     }
@@ -191,7 +196,7 @@ public class LanternVpn extends VpnService implements Handler.Callback, Runnable
         // Create a new interface using the builder and save the parameters.
         mInterface = builder.setSession(mSessionName)
             .setConfigureIntent(mConfigureIntent)
-            .establish();
+                .establish();
         Log.i(TAG, "New interface: " + mInterface);
     }
 }
