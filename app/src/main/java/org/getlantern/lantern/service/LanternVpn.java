@@ -58,6 +58,9 @@ public class LanternVpn extends VpnService
         }
 
         String action = intent.getAction();
+
+        // STOP button was pressed
+        // shut down Lantern and close the VPN connection
         if (action.equals(LanternConfig.DISABLE_VPN)) {
             stopLantern();
             if (mHandler != null) {
