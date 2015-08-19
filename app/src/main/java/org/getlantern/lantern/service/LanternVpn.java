@@ -25,6 +25,8 @@ import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.widget.Toast;
 
+
+import org.getlantern.lantern.config.LanternConfig;
 import org.getlantern.lantern.model.Lantern;
 
 import java.io.FileInputStream;
@@ -45,15 +47,33 @@ public class LanternVpn extends VpnService
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // The handler is only used to show messages.
-        if (mHandler == null) {
-            mHandler = new Handler(this);
+
+        if (intent == null) {
+            return START_STICKY;
         }
 
         // Stop the previous session by interrupting the thread.
         if (mThread != null) {
             mThread.interrupt();
         }
+
+        String action = intent.getAction();
+        if (action.equals(LanternConfig.DISABLE_VPN)) {
+            stopLantern();
+            if (mHandler != null) {
+                mHandler.postDelayed(new Runnable () {
+                    public void run () { stopSelf();
+                    }
+                }, 1000);
+            }
+            return START_STICKY;
+        }
+
+        // The handler is only used to show messages.
+        if (mHandler == null) {
+            mHandler = new Handler(this);
+        }
+
 
         // Make sure we check for null here
         // as on start command can run multiple times
@@ -89,6 +109,16 @@ public class LanternVpn extends VpnService
         thread.start();
     }
 
+    private void stopLantern() {
+        try {
+            if (mInterface != null) {
+                mInterface.close();
+                mInterface = null;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Could not stop Lantern: " + e);
+        }
+    }
     @Override
     public void onDestroy() {
         if (mThread != null) {
@@ -107,8 +137,8 @@ public class LanternVpn extends VpnService
     @Override
     public synchronized void run() {
         try {
-            Log.i(TAG, "Starting VPN");
             if (!isRunning()) {
+                Log.i(TAG, "Starting VPN");
                 startRun();
             }
         } catch (Exception e) {
@@ -142,7 +172,7 @@ public class LanternVpn extends VpnService
                     {
                         while (true) {
                             // Read any IP packet from the VpnService input stream
-                            // and copy those to a ByteBuffer
+                            // and copy to a ByteBuffer
                             int length = in.read(packet.array());
                             if (length > 0) {
                                 packet.limit(length);
@@ -156,7 +186,6 @@ public class LanternVpn extends VpnService
                     catch (Exception e)
                     {
                         Log.e(TAG, "Got an exception receiving packets: " + e);
-                        e.printStackTrace();
                     }
 
                 }

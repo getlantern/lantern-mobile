@@ -73,7 +73,6 @@ public class LanternMainActivity extends ActionBarActivity implements Handler.Ca
         if (intent != null) {
             startActivity(intent);
         }
-        startActivity(intent);
     }
 
     protected void stopLantern() {
