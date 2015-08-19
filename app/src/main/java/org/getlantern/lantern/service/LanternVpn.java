@@ -28,7 +28,6 @@ import android.widget.Toast;
 import org.getlantern.lantern.model.Lantern;
 
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 
 public class LanternVpn extends VpnService
@@ -37,7 +36,6 @@ public class LanternVpn extends VpnService
 
     private PendingIntent mConfigureIntent;
     private String mSessionName = "LanternVpn";
-    private String defaultDnsServer = "8.8.8.8";
 
     private Handler mHandler;
     private Thread mThread;
@@ -184,7 +182,6 @@ public class LanternVpn extends VpnService
         builder.setMtu(1500);
         builder.addRoute("0.0.0.0", 0);
         builder.addAddress("10.0.0.1", 28);
-        builder.addDnsServer(defaultDnsServer);
 
         // Close the old interface since the parameters have been changed.
         try {
