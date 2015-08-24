@@ -60,6 +60,14 @@ By default, all three tasks will be run in order with:
 ```
 make
 ```
+
+#### Debugging
+
+With Lantern Android running, to filter Logcat messages:
+
+```
+adb logcat | grep `adb shell ps | grep org.getlantern.lantern | cut -c10-15`
+```
  
  
  
