@@ -3,6 +3,7 @@ package org.getlantern.lantern.model;
 import android.util.Log;
 
 import java.net.InetAddress;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 
 import go.client.*;
@@ -13,17 +14,46 @@ public class Lantern extends Client.SocketProvider.Stub {
 
     private static final String TAG = "Lantern";
     private LanternVpn service;
+    private FileOutputStream outputStream;
+    private Client.GoCallback.Stub callback;
 
+    //
     public Lantern(LanternVpn service) {
         this.service = service;
+        this.setupCallbacks();
+    }
+
+    // Configures callbacks from Lantern during packet
+    // processing
+    private void setupCallbacks() {
+        final Lantern service = this;
+        this.callback = new Client.GoCallback.Stub() {
+            public void AfterStart() {
+                Log.d(TAG, "Lantern successfully started.");
+            }
+
+            public void AfterConfigure() {
+                Log.d(TAG, "Lantern successfully configured.");
+            }
+
+            public void WritePacket(byte[] bytes) {
+                service.returnPacket(bytes);
+                // Just used to demonstrate a callback after intercepting a packet
+            }
+
+        };
     }
 
     public void start(final InetAddress localIP, final int port) {
         try {
             Log.d(TAG, "About to start Lantern..");
-            String lanternAddress = String.format("%s:%s", localIP.getHostAddress(), port);
+            String lanternAddress = String.format("127.0.0.1:%d", port);
             Client.RunClientProxy(lanternAddress,
-                    LanternConfig.APP_NAME, null);
+                    LanternConfig.APP_NAME, this, callback);
+            // Wait a few seconds for processing until Lantern starts
+            Thread.sleep(2000);
+            // Configure Lantern and interception rules
+            Client.Configure(this, callback);
 
         } catch (final Exception e) {
             Log.e(TAG, "Fatal error while trying to run Lantern: " + e);
@@ -52,22 +82,27 @@ public class Lantern extends Client.SocketProvider.Stub {
         }
     }
 
+    public void configure(FileOutputStream out) {
+        this.outputStream = out;
+
+    }
+
+    public void returnPacket(byte[] bytes) {
+        try {
+            Log.d(TAG, "Received a response packet: " + bytes.length);
+            outputStream.write(bytes);
+            outputStream.flush();
+        } catch (Exception e) {
+            Log.e(TAG, "Error writing to output stream: " + e);
+        }
+        // Just used to demonstrate a callback after intercepting a packet
+    }
+
     // As packets arrive on the VpnService, processPacket sends the raw bytes
     // to Lantern for processing
     public void processPacket(final ByteBuffer packet) {
-        Log.d(TAG, "Processing a packet with Lantern");
-        Client.GoCallback.Stub callback = new Client.GoCallback.Stub() {
-            public void Do() {
-                Log.d(TAG, "Lantern successfully started");
-            }
-
-            public void WritePacket(String destination, long port, String protocol) {
-                // Just used to demonstrate a callback after intercepting a packet
-            }
-        };
-
         try {
-            Client.CapturePacket(packet.array(), callback);
+            Client.ProcessPacket(packet.array(), this, callback);
         } catch (final Exception e) {
             Log.e(TAG, "Unable to process incoming packet!");
         }

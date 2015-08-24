@@ -30,7 +30,9 @@ import org.getlantern.lantern.config.LanternConfig;
 import org.getlantern.lantern.model.Lantern;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
+import java.net.InetAddress;
 
 public class LanternVpn extends VpnService
         implements Handler.Callback, Runnable {
@@ -104,6 +106,9 @@ public class LanternVpn extends VpnService
             public void run() {
                 try {
                     lantern = new Lantern(service);
+                    lantern.start(InetAddress.getLocalHost(), 9192);
+                    Thread.sleep(3000);
+
                 } catch (Exception uhe) {
                     Log.e(TAG, "Error starting Lantern with given host: " + uhe);
                 }
@@ -160,12 +165,15 @@ public class LanternVpn extends VpnService
             configure();
 
             final FileInputStream in = new FileInputStream(mInterface.getFileDescriptor());
+            final FileOutputStream out = new FileOutputStream(
+                    mInterface.getFileDescriptor());
 
             final ByteBuffer packet = ByteBuffer.allocate(32767);
 
             Log.d(TAG, "VPN interface is attached to Lantern");
 
-            lantern.testConnect();
+            lantern.configure(out);
+            //lantern.testConnect();
 
             new Thread ()
             {
@@ -179,6 +187,7 @@ public class LanternVpn extends VpnService
                             int length = in.read(packet.array());
                             if (length > 0) {
                                 packet.limit(length);
+                                // forward IP packet from TUN to Lantern
                                 lantern.processPacket(packet);
                                 packet.clear();
                             }
@@ -201,6 +210,8 @@ public class LanternVpn extends VpnService
 
     }
 
+    // Obtain a interface for the TUN. We can only have one
+    // active TUN interface for a
     private void configure() throws Exception {
         // If the old interface has exactly the same parameters, use it!
         if (mInterface != null) {

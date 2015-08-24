@@ -27,6 +27,8 @@ public class PromptVpnActivity extends Activity {
 
     }
 
+    // Make a VPN connection from the client
+    // We should only have one active VPN connection per client
     private void startVpnService ()
     {
         if (intent != null) {
