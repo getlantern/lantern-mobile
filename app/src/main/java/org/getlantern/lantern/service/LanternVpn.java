@@ -35,7 +35,7 @@ import java.nio.ByteBuffer;
 import java.net.InetAddress;
 
 public class LanternVpn extends VpnService
-        implements Handler.Callback, Runnable {
+    implements Handler.Callback, Runnable {
     private static final String TAG = "LanternVpn";
 
     private PendingIntent mConfigureIntent;
@@ -235,7 +235,7 @@ public class LanternVpn extends VpnService
         // Create a new interface using the builder and save the parameters.
         mInterface = builder.setSession(mSessionName)
             .setConfigureIntent(mConfigureIntent)
-                .establish();
+            .establish();
         Log.i(TAG, "New interface: " + mInterface);
     }
 }
