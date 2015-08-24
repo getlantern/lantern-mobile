@@ -14,8 +14,8 @@ Lantern Android is an app that uses the Android VpnService API to route all devi
 
 #### Prerequisites
 
-* [Android Studio][2]
-* git
+* [Android Studio][1]
+* Git
 
 Download the most recent copy of the Lantern Android source code using `git`:
 
@@ -69,5 +69,4 @@ With Lantern Android running, to filter Logcat messages:
 adb logcat | grep `adb shell ps | grep org.getlantern.lantern | cut -c10-15`
 ```
  
- 
- 
+[1]: http://developer.android.com/tools/studio/index.html   
