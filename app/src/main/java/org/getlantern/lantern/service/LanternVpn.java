@@ -28,14 +28,12 @@ import android.widget.Toast;
 
 import org.getlantern.lantern.config.LanternConfig;
 import org.getlantern.lantern.model.Lantern;
+import ca.psiphon.PsiphonTunnel;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.nio.ByteBuffer;
 import java.net.InetAddress;
 
 public class LanternVpn extends VpnService
-    implements Handler.Callback, Runnable {
+    implements Handler.Callback {
     private static final String TAG = "LanternVpn";
 
     private PendingIntent mConfigureIntent;
@@ -46,6 +44,11 @@ public class LanternVpn extends VpnService
     private Lantern lantern = null;
 
     private ParcelFileDescriptor mInterface;
+
+    /*@Override
+    public void onCreate() {
+        System.loadLibrary("tun2socks");
+    }*/
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -84,17 +87,18 @@ public class LanternVpn extends VpnService
         // as on start command can run multiple times
         if (lantern == null) {
             startLantern();
+            startit();
         }
 
         // Start a new session by creating a new thread.
-        mThread = new Thread(this, "LanternVpnThread");
+        /*mThread = new Thread(this, "LanternVpnThread");
         try {
             mThread.sleep(5000);
             mThread.start();
         }
         catch (Exception e) {
             Log.d(TAG, "Couldn't configure VPN interface: " + e);
-        }
+        }*/
         return START_STICKY;
     }
 
@@ -106,7 +110,7 @@ public class LanternVpn extends VpnService
             public void run() {
                 try {
                     lantern = new Lantern(service);
-                    lantern.start(InetAddress.getLocalHost(), 9192);
+                    lantern.start(InetAddress.getLocalHost(), 9193);
                     Thread.sleep(3000);
 
                 } catch (Exception uhe) {
@@ -121,6 +125,7 @@ public class LanternVpn extends VpnService
         try {
             if (mInterface != null) {
                 mInterface.close();
+                PsiphonTunnel.stopTun2Socks();
                 mInterface = null;
             }
         } catch (Exception e) {
@@ -142,8 +147,7 @@ public class LanternVpn extends VpnService
         return true;
     }
 
-    @Override
-    public synchronized void run() {
+    public void startit() {
         try {
             if (!isRunning()) {
                 Log.i(TAG, "Starting VPN");
@@ -159,10 +163,10 @@ public class LanternVpn extends VpnService
         return mInterface != null;
     }
 
-    private void startRun() throws Exception {
+    private synchronized void startRun() throws Exception {
         try {
 
-            configure();
+            /*configure();
 
             final FileInputStream in = new FileInputStream(mInterface.getFileDescriptor());
             final FileOutputStream out = new FileOutputStream(
@@ -172,8 +176,9 @@ public class LanternVpn extends VpnService
 
             Log.d(TAG, "VPN interface is attached to Lantern");
 
-            lantern.configure(out);
-            //lantern.testConnect();
+            //lantern.configure(out);
+            //lantern.start(InetAddress.getLocalHost(), 9192);
+            //lantern.testConnect();*/
 
             new Thread ()
             {
@@ -181,18 +186,52 @@ public class LanternVpn extends VpnService
                 {
                     try
                     {
-                        while (true) {
+
+                        // If the old interface has exactly the same parameters, use it!
+                        if (mInterface != null) {
+                            Log.i(TAG, "Using the previous interface");
+                            return;
+                        }
+
+                        // Configure a builder while parsing the parameters.
+                        Builder builder = new Builder();
+                        builder.setMtu(1500);
+                        builder.addDnsServer("8.8.4.4");
+                        builder.addRoute("0.0.0.0", 0);
+                        builder.addAddress("10.0.0.1", 28);
+
+                        // Close the old interface since the parameters have been changed.
+                        try {
+                            mInterface.close();
+                        } catch (Exception e) {
+                            // ignore
+                        }
+
+                        // Create a new interface using the builder and save the parameters.
+                        mInterface = builder.setSession(mSessionName)
+                                .setConfigureIntent(mConfigureIntent)
+                                .establish();
+                        Log.i(TAG, "New interface: " + mInterface);
+
+                        Thread.sleep(4000);
+
+                        PsiphonTunnel.startTun2Socks(mInterface, 1500,
+                                "10.0.0.2", "255.255.255.0",
+                                "127.0.0.1:9192", "127.0.0.1:7300", false);
+                        Log.d(TAG, "Successfully started Tun2Socks.....");
+
+                        /*while (true) {
                             // Read any IP packet from the VpnService input stream
                             // and copy to a ByteBuffer
                             int length = in.read(packet.array());
                             if (length > 0) {
                                 packet.limit(length);
                                 // forward IP packet from TUN to Lantern
-                                lantern.processPacket(packet);
+                                //lantern.processPacket(packet);
                                 packet.clear();
                             }
 
-                        }
+                        }*/
 
                     }
                     catch (Exception e)
@@ -222,6 +261,7 @@ public class LanternVpn extends VpnService
         // Configure a builder while parsing the parameters.
         Builder builder = new Builder();
         builder.setMtu(1500);
+        builder.addDnsServer("8.8.4.4");
         builder.addRoute("0.0.0.0", 0);
         builder.addAddress("10.0.0.1", 28);
 
@@ -234,8 +274,14 @@ public class LanternVpn extends VpnService
 
         // Create a new interface using the builder and save the parameters.
         mInterface = builder.setSession(mSessionName)
-            .setConfigureIntent(mConfigureIntent)
+                .setConfigureIntent(mConfigureIntent)
             .establish();
         Log.i(TAG, "New interface: " + mInterface);
+
+        Thread.sleep(4000);
+
+        //Tun2Socks.Start(mInterface, 1500, "10.0.0.1", "255.255.255.0",
+        //        "127.0.0.1:9192", "127.0.0.1:7300", true);
+        Log.d(TAG, "Successfully started Tun2Socks.....");
     }
 }

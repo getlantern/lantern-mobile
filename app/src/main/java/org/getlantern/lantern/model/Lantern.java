@@ -47,11 +47,12 @@ public class Lantern extends Client.SocketProvider.Stub {
     public void start(final InetAddress localIP, final int port) {
         try {
             Log.d(TAG, "About to start Lantern..");
-            String lanternAddress = String.format("127.0.0.1:%d", port);
+            String lanternAddress = String.format("%s:%d",
+                    localIP.getHostAddress(), port);
             Client.RunClientProxy(lanternAddress,
                     LanternConfig.APP_NAME, this, callback);
             // Wait a few seconds for processing until Lantern starts
-            Thread.sleep(2000);
+            Thread.sleep(3000);
             // Configure Lantern and interception rules
             Client.Configure(this, callback);
 
