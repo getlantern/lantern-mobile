@@ -173,7 +173,6 @@ public class LanternVpn extends VpnService
             Log.d(TAG, "VPN interface is attached to Lantern");
 
             lantern.configure(out);
-            //lantern.testConnect();
 
             new Thread ()
             {
