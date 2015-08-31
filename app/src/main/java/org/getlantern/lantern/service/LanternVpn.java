@@ -106,7 +106,7 @@ public class LanternVpn extends VpnService
             public void run() {
                 try {
                     lantern = new Lantern(service);
-                    lantern.start(InetAddress.getLocalHost(), 9192);
+                    lantern.start(LanternConfig.LANTERN_PORT);
                     Thread.sleep(3000);
 
                 } catch (Exception uhe) {
@@ -172,15 +172,18 @@ public class LanternVpn extends VpnService
 
             Log.d(TAG, "VPN interface is attached to Lantern");
 
-            lantern.configure(out);
-
             new Thread ()
             {
                 public void run ()
                 {
                     try
                     {
+                        // We use a timer to determine the status of the tunnel
+                        int timer = 0;
+
                         while (true) {
+
+                            boolean idle = true;
                             // Read any IP packet from the VpnService input stream
                             // and copy to a ByteBuffer
                             int length = in.read(packet.array());
@@ -189,8 +192,56 @@ public class LanternVpn extends VpnService
                                 // forward IP packet from TUN to Lantern
                                 lantern.processPacket(packet);
                                 packet.clear();
+
+                                // There might be more outgoing packets.
+                                idle = false;
+
+                                // If we were receiving, switch to sending.
+                                if (timer < 1) {
+                                    timer = 1;
+                                }
                             }
 
+                            length = lantern.readPacket(packet);
+                            if (length > 0) {
+                                if (packet.get(0) != 0) {
+                                    // Write the incoming packet to the output stream.
+                                    out.write(packet.array(), 0, length);
+                                }
+                                packet.clear();
+
+                                // There might be more incoming packets.
+                                idle = false;
+
+                                if (timer > 0) {
+                                    timer = 0;
+                                }
+                            }
+
+                            if (idle) {
+                                // sleep for a small amount of time
+                                // to avoid busy looping
+                                Thread.sleep(100);
+
+                                // increase the timer
+                                timer += (timer > 0) ? 100 : -100;
+
+                                if (timer < -15000) {
+                                    packet.put((byte) 0).limit(1);
+                                    for (int i = 0; i < 3; ++i) {
+                                        packet.position(0);
+                                        lantern.processPacket(packet);
+                                    }
+
+                                    packet.clear();
+                                    timer = 1;
+                                }
+
+                                // We are sending for a long time but not receiving.
+                                if (timer > 20000) {
+                                    throw new IllegalStateException("Timed out");
+                                }
+                            }
                         }
 
                     }
