@@ -5,6 +5,8 @@ import android.util.Log;
 import java.net.InetAddress;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 import go.client.*;
 import org.getlantern.lantern.service.LanternVpn;
@@ -14,13 +16,17 @@ public class Lantern extends Client.SocketProvider.Stub {
 
     private static final String TAG = "Lantern";
     private LanternVpn service;
-    private FileOutputStream outputStream;
     private Client.GoCallback.Stub callback;
+
+    private BlockingQueue<byte[]> packets;
 
     //
     public Lantern(LanternVpn service) {
         this.service = service;
         this.setupCallbacks();
+        // this is the queue where we write
+        // incoming packets to
+        this.packets = new LinkedBlockingQueue<>();
     }
 
     // Configures callbacks from Lantern during packet
@@ -37,14 +43,18 @@ public class Lantern extends Client.SocketProvider.Stub {
             }
 
             public void WritePacket(byte[] bytes) {
-                service.returnPacket(bytes);
-                // Just used to demonstrate a callback after intercepting a packet
+                try {
+                    packets.put(bytes);
+                } catch (InterruptedException ie) {
+                    Log.e(TAG, "Unable to write packet to response channel");
+                } catch (IllegalStateException e) {
+                    Log.e(TAG, "Error writing packet to output stream.");
+                }
             }
-
         };
     }
 
-    public void start(final InetAddress localIP, final int port) {
+    public void start(final int port) {
         try {
             Log.d(TAG, "About to start Lantern..");
             String lanternAddress = String.format("%s:%d",
@@ -72,33 +82,6 @@ public class Lantern extends Client.SocketProvider.Stub {
         }
     }
 
-
-    // Runs a simple HTTP GET to verify Lantern is able to open connections
-    public void testConnect() {
-        try {
-            final String testAddr = "www.example.com:80";
-            Client.TestConnect(this, testAddr);
-        } catch (final Exception e) {
-
-        }
-    }
-
-    public void configure(FileOutputStream out) {
-        this.outputStream = out;
-
-    }
-
-    public void returnPacket(byte[] bytes) {
-        try {
-            Log.d(TAG, "Received a response packet: " + bytes.length);
-            outputStream.write(bytes);
-            outputStream.flush();
-        } catch (Exception e) {
-            Log.e(TAG, "Error writing to output stream: " + e);
-        }
-        // Just used to demonstrate a callback after intercepting a packet
-    }
-
     // As packets arrive on the VpnService, processPacket sends the raw bytes
     // to Lantern for processing
     public void processPacket(final ByteBuffer packet) {
@@ -107,5 +90,17 @@ public class Lantern extends Client.SocketProvider.Stub {
         } catch (final Exception e) {
             Log.e(TAG, "Unable to process incoming packet!");
         }
+    }
+
+    public int readPacket(final ByteBuffer packet) {
+        if (this.packets.size() > 0) {
+            byte[] response = this.packets.poll(); 
+            if (response != null) {
+                int length = response.length;
+                packet.put(response);
+                return length;
+            }
+        }
+        return 0;
     }
 }
