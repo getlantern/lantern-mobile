@@ -54,17 +54,18 @@ public class Lantern extends Client.SocketProvider.Stub {
         };
     }
 
-    public void start(final int port) {
+    public void start() {
         try {
             Log.d(TAG, "About to start Lantern..");
-            String lanternAddress = String.format("%s:%d",
-                    localIP.getHostAddress(), port);
-            Client.RunClientProxy(lanternAddress,
-                    LanternConfig.APP_NAME, this, callback);
+            String httpAddr = String.format("127.0.0.1:%d", LanternConfig.HTTP_PORT);
+            String socksAddr = String.format("127.0.0.1:%d", LanternConfig.SOCKS_PORT);
+
+            //Client.RunClientProxy(httpAddr,
+            //        LanternConfig.APP_NAME, this, callback);
             // Wait a few seconds for processing until Lantern starts
-            Thread.sleep(3000);
+            //Thread.sleep(3000);
             // Configure Lantern and interception rules
-            Client.Configure(this, callback);
+            Client.Configure(this, httpAddr, socksAddr, callback);
 
         } catch (final Exception e) {
             Log.e(TAG, "Fatal error while trying to run Lantern: " + e);
@@ -79,16 +80,6 @@ public class Lantern extends Client.SocketProvider.Stub {
     public void Protect(long fileDescriptor) throws Exception {
         if (!this.service.protect((int) fileDescriptor)) {
             throw new Exception("protect socket failed");
-        }
-    }
-
-    // As packets arrive on the VpnService, processPacket sends the raw bytes
-    // to Lantern for processing
-    public void processPacket(final ByteBuffer packet) {
-        try {
-            Client.ProcessPacket(packet.array(), this, callback);
-        } catch (final Exception e) {
-            Log.e(TAG, "Unable to process incoming packet!");
         }
     }
 

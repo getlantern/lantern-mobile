@@ -17,6 +17,10 @@ compile-debug:
 build-debug:
 	./gradlew assembleDebug
 
+build-tun2socks:
+	ndk-build
+	cp libs/armeabi-v7a/libtun2socks.so app/libs/armeabi-v7a/
+
 $(APK_FILE): build-debug
 
 install: $(APK_FILE)
@@ -28,6 +32,8 @@ uninstall:
 
 run:
 	$(call pkg_variables)
+	echo $(PACKAGE)
+	echo $(MAIN_ACTIVITY)
 	adb shell am start -n $(PACKAGE)/$(MAIN_ACTIVITY)
 
 clean:

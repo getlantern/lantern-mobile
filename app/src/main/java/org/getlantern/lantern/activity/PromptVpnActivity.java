@@ -56,7 +56,15 @@ public class PromptVpnActivity extends Activity {
 
         if (request == REQUEST_VPN && response == RESULT_OK)
         {
-            sendIntentToService(LanternConfig.ENABLE_VPN);
+            Handler h = new Handler();
+            h.postDelayed(new Runnable () {
+
+                public void run ()
+                {
+                    sendIntentToService(LanternConfig.ENABLE_VPN);		
+                    finish();
+                }
+            }, 1000);
         }
     }
 

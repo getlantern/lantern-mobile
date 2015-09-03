@@ -28,12 +28,10 @@ import android.widget.Toast;
 
 import org.getlantern.lantern.config.LanternConfig;
 import org.getlantern.lantern.model.Lantern;
-import ca.psiphon.PsiphonTunnel;
-
-import java.net.InetAddress;
+import org.getlantern.lantern.android.vpn.Tun2Socks;
 
 public class LanternVpn extends VpnService
-    implements Handler.Callback {
+    implements Handler.Callback, Runnable {
     private static final String TAG = "LanternVpn";
 
     private PendingIntent mConfigureIntent;
@@ -44,11 +42,6 @@ public class LanternVpn extends VpnService
     private Lantern lantern = null;
 
     private ParcelFileDescriptor mInterface;
-
-    /*@Override
-      public void onCreate() {
-      System.loadLibrary("tun2socks");
-      }*/
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -87,9 +80,17 @@ public class LanternVpn extends VpnService
         // as on start command can run multiple times
         if (lantern == null) {
             startLantern();
-            startit();
         }
 
+        // Start a new session by creating a new thread.
+        mThread = new Thread(this, "LanternVpnThread");
+        try {
+            mThread.sleep(5000);
+            mThread.start();
+        }
+        catch (Exception e) {
+            Log.d(TAG, "Couldn't configure VPN interface: " + e);
+        }
         return START_STICKY;
     }
 
@@ -101,9 +102,7 @@ public class LanternVpn extends VpnService
             public void run() {
                 try {
                     lantern = new Lantern(service);
-
-                    lantern.start(LanternConfig.LANTERN_PORT);
-
+                    lantern.start();
                     Thread.sleep(3000);
 
                 } catch (Exception uhe) {
@@ -118,12 +117,12 @@ public class LanternVpn extends VpnService
         try {
             if (mInterface != null) {
                 mInterface.close();
-                PsiphonTunnel.stopTun2Socks();
                 mInterface = null;
             }
         } catch (Exception e) {
             Log.e(TAG, "Could not stop Lantern: " + e);
         }
+        Tun2Socks.Stop();
     }
     @Override
     public void onDestroy() {
@@ -140,7 +139,8 @@ public class LanternVpn extends VpnService
         return true;
     }
 
-    public void startit() {
+    @Override
+    public synchronized void run() {
         try {
             if (!isRunning()) {
                 Log.i(TAG, "Starting VPN");
@@ -156,90 +156,57 @@ public class LanternVpn extends VpnService
         return mInterface != null;
     }
 
-    private synchronized void startRun() throws Exception {
+    private void startRun() throws Exception {
         try {
 
-            // If the old interface has exactly the same parameters, use it!
-            if (mInterface != null) {
-                Log.i(TAG, "Using the previous interface");
-                return;
-            }
+            configure();
+            Log.i(TAG, "Started VPN mode");
 
-            // Configure a builder while parsing the parameters.
-            Builder builder = new Builder();
-            builder.setMtu(1500);
-            builder.addDnsServer("8.8.4.4");
-            builder.addRoute("0.0.0.0", 0);
-            builder.addAddress("10.0.0.1", 28);
-
-            // Close the old interface since the parameters have been changed.
-            try {
-                mInterface.close();
-            } catch (Exception e) {
-                // ignore
-            }
-
-            // Create a new interface using the builder and save the parameters.
-            mInterface = builder.setSession(mSessionName)
-                .setConfigureIntent(mConfigureIntent)
-                .establish();
-            Log.i(TAG, "New interface: " + mInterface);
-
-            Thread.sleep(4000);
-
-            PsiphonTunnel.startTun2Socks(mInterface, 1500,
-                    "10.0.0.2", "255.255.255.0",
-                    "127.0.0.1:9192", "127.0.0.1:7300", false);
-            Log.d(TAG, "Successfully started Tun2Socks.....");
-
-        }
-        catch (Exception e)
-        {
-            Log.e(TAG, "Got an exception receiving packets: " + e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error with VPN" + e);
         }
 
     }
-    Log.i(TAG, "Started VPN mode");
 
-    } catch (Exception e) {
-        Log.e(TAG, "Error with VPN" + e);
+    // Obtain a interface for the TUN. We can only have one
+    // active TUN interface for a
+    private void configure() throws Exception {
+        // If the old interface has exactly the same parameters, use it!
+        if (mInterface != null) {
+            Log.i(TAG, "Using the previous interface");
+            return;
+        }
+
+        // Configure a builder while parsing the parameters.
+        Builder builder = new Builder();
+        builder.setMtu(1500);
+        builder.addRoute("0.0.0.0", 0);
+        builder.addDnsServer("8.8.4.4");
+        builder.addAddress("10.0.0.1", 28);
+
+        // Close the old interface since the parameters have been changed.
+        try {
+            mInterface.close();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // Create a new interface using the builder and save the parameters.
+        mInterface = builder.setSession(mSessionName)
+            .setConfigureIntent(mConfigureIntent)
+            .establish();
+
+        Log.i(TAG, "New interface: " + mInterface);
+
+        Tun2Socks.Start(
+                mInterface,
+                1500,
+                "10.0.0.2",
+                "255.255.255.0",
+                "127.0.0.1:" + String.valueOf(LanternConfig.SOCKS_PORT),
+                "104.131.157.209:7300",
+                true
+        );
+        Log.i(TAG, "Successfully started Tun2Socks....");
     }
-
-}
-
-// Obtain a interface for the TUN. We can only have one
-// active TUN interface for a
-private void configure() throws Exception {
-    // If the old interface has exactly the same parameters, use it!
-    if (mInterface != null) {
-        Log.i(TAG, "Using the previous interface");
-        return;
-    }
-
-    // Configure a builder while parsing the parameters.
-    Builder builder = new Builder();
-    builder.setMtu(1500);
-    builder.addDnsServer("8.8.4.4");
-    builder.addRoute("0.0.0.0", 0);
-    builder.addAddress("10.0.0.1", 28);
-
-    // Close the old interface since the parameters have been changed.
-    try {
-        mInterface.close();
-    } catch (Exception e) {
-        // ignore
-    }
-
-    // Create a new interface using the builder and save the parameters.
-    mInterface = builder.setSession(mSessionName)
-        .setConfigureIntent(mConfigureIntent)
-        .establish();
-    Log.i(TAG, "New interface: " + mInterface);
-
-    Thread.sleep(4000);
-
-    //Tun2Socks.Start(mInterface, 1500, "10.0.0.1", "255.255.255.0",
-    //        "127.0.0.1:9192", "127.0.0.1:7300", true);
-    Log.d(TAG, "Successfully started Tun2Socks.....");
-}
 }
