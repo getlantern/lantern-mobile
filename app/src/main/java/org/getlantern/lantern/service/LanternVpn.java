@@ -204,7 +204,7 @@ public class LanternVpn extends VpnService
                 "10.0.0.2",
                 "255.255.255.0",
                 "127.0.0.1:" + String.valueOf(LanternConfig.SOCKS_PORT),
-                "104.131.157.209:7300",
+                LanternConfig.UDPGW_SERVER,
                 true
         );
         Log.i(TAG, "Successfully started Tun2Socks....");

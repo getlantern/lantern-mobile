@@ -35,6 +35,13 @@ select the `lantern` folder you just checked out with git.
 * Java Development Kit 1.7
 * Git
 
+#### Building Tun2Socks
+Lantern Android uses [tun2socks](https://code.google.com/p/badvpn/wiki/tun2socks) to route intercepted VPN traffic through a local SOCKS server.
+
+```
+make build-tun2socks
+```
+
 #### Building, installing and running
 
 Build the Debug target:

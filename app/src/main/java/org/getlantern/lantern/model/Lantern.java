@@ -60,12 +60,12 @@ public class Lantern extends Client.SocketProvider.Stub {
             String httpAddr = String.format("127.0.0.1:%d", LanternConfig.HTTP_PORT);
             String socksAddr = String.format("127.0.0.1:%d", LanternConfig.SOCKS_PORT);
 
-            //Client.RunClientProxy(httpAddr,
-            //        LanternConfig.APP_NAME, this, callback);
+            Client.RunClientProxy(httpAddr,
+                    LanternConfig.APP_NAME, this, callback);
             // Wait a few seconds for processing until Lantern starts
-            //Thread.sleep(3000);
+            Thread.sleep(3000);
             // Configure Lantern and interception rules
-            Client.Configure(this, httpAddr, socksAddr, callback);
+            Client.Configure(this, httpAddr, socksAddr, LanternConfig.UDPGW_SERVER, callback);
 
         } catch (final Exception e) {
             Log.e(TAG, "Fatal error while trying to run Lantern: " + e);
