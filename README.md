@@ -1,4 +1,6 @@
-# Lantern Android
+# **UNMAINTAINED** Lantern Android
+
+### This project is no longer maintained.
 
 ## Overview
 
