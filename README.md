@@ -1,6 +1,6 @@
 # **UNMAINTAINED** Lantern Android
 
-### This project is no longer maintained.
+### This project is no longer maintained, see [lantern-client](https://github.com/getlantern/lantern-client) instead.
 
 ## Overview
 
